@@ -1,8 +1,10 @@
 <resources>
     <string name="app_name">MlkitSample</string>
-    <string name="take_camera_in_front_of_your_face">1- دوربین را مقابل صورت خود بگیرید </string>
-    <string name="put_your_face_in_the_frame">2- صورت خود را در کادر قرار دهید</string>
-    <string name="please_blink">3- لطفا پلک بزنید</string>
-    <string name="please_smile">4- لطفا لبخند بزنید</string>
-    <string name="please_turn_your_neck">5- گردنت را کج کن</string>
+    <string name="take_camera_in_front_of_your_face">دوربین را مقابل صورت خود بگیرید </string>
+    <string name="put_your_face_in_the_frame"> صورت خود را در کادر قرار دهید</string>
+    <string name="please_blink"> لطفا پلک بزنید</string>
+    <string name="please_smile"> لطفا لبخند بزنید</string>
+    <string name="please_turn_your_neck_up">گردنت را بالا ببر</string>
+    <string name="please_turn_your_neck_right">گردنت را به راست ببر</string>
+    <string name="please_turn_your_neck_left">گردنت را به چپ ببر</string>
 </resources>
