@@ -21,6 +21,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.view.doOnLayout
+import androidx.lifecycle.MutableLiveData
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
     private lateinit var firstLinearLayout: LinearLayout
     var steps = 0
+    private var message = MutableLiveData<String>()
 
 
     private val LIVE_DETECTION_OPERATIONS = arrayListOf(
@@ -64,9 +66,13 @@ class MainActivity : AppCompatActivity() {
         imageView = findViewById(R.id.image_view)
         firstLinearLayout = findViewById(R.id.first_layout)
         messageTextView = findViewById(R.id.message_text_view)
-
+        message.postValue(resources.getString(R.string.take_camera_in_front_of_your_face))
+        message.observe(this ,  {
+            messageTextView.text = message.value
+        })
+/*
         messageTextView.text =
-            resources.getString(R.string.take_camera_in_front_of_your_face)
+            resources.getString(R.string.take_camera_in_front_of_your_face)*/
         drawOval()
         startCamera()
 
@@ -161,11 +167,9 @@ class MainActivity : AppCompatActivity() {
                 detector.process(image)
                     .addOnSuccessListener { faces ->
                         for (face in faces) {
-                            steps++
                             if (steps < 3) {
                                 if (face.boundingBox.left < 0 || face.boundingBox.top < 0) {
-                                    messageTextView.text =
-                                        resources.getString(R.string.put_your_face_in_the_frame)
+                                        message.value = resources.getString(R.string.put_your_face_in_the_frame)
                                 } else {
                                     imageCapture.takePicture(
                                         outputOptions,
@@ -184,33 +188,33 @@ class MainActivity : AppCompatActivity() {
                                                     Uri.fromFile(photoFile).toString()
                                             }
                                         })
-                                    messageTextView.text = selectedOperations[0]
+                                    message.value = selectedOperations[0]
 
                                     //TODO : choose random operations
                                     when (steps) {
 
-                                        1 -> {
+                                        0 -> {
                                             chooseFunctionFromFunctionName(
                                                 selectedOperations[0],
                                                 face
                                             )
-                                            messageTextView.text = selectedOperations[1]
+                                            message.value = selectedOperations[1]
 
                                         }
-                                        2 -> {
+                                        1 -> {
                                             chooseFunctionFromFunctionName(
                                                 selectedOperations[1],
                                                 face
                                             )
-                                            messageTextView.text = selectedOperations[2]
+                                            message.value = selectedOperations[2]
 
                                         }
-                                        3 -> {
+                                        2 -> {
                                             chooseFunctionFromFunctionName(
                                                 selectedOperations[2],
                                                 face
                                             )
-                                            messageTextView.text = "Congrats! It is OK."
+                                            message.value = "Congrats! It is OK."
 
                                         }
 
