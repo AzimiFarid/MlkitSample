@@ -6,6 +6,6 @@
     <string name="please_blink_left_eye"> لطفا چشم راست خود را باز و بسته کنید</string>
     <string name="please_smile"> لطفا لبخند بزنید</string>
     <string name="please_turn_your_neck_up">لطفا سر خود را به سمت بالا بگیرید</string>
-    <string name="please_turn_your_neck_right">لطفا سر خود را به سمت شانه ی راست خود بچرخانید</string>
+    <string name="please_turn_your_neck_right">لطفا سر خود را به سمت شانه ی راست خود خم کنید</string>
     <string name="please_turn_your_neck_left">لطفا سر خود را به سمت چپ بچرخانید</string>
 </resources>
