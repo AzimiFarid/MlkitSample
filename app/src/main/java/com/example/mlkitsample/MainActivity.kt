@@ -2,7 +2,6 @@ package com.example.mlkitsample
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.DialogInterface
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -15,7 +14,6 @@ import android.os.Bundle
 import android.util.Log
 import android.util.Size
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -30,7 +28,6 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
 
 class MainActivity : AppCompatActivity() {
     lateinit var context: Context
