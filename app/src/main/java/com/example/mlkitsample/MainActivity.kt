@@ -1,7 +1,9 @@
 package com.example.mlkitsample
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -9,11 +11,14 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ShapeDrawable
 import android.graphics.drawable.shapes.OvalShape
 import android.net.Uri
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
 import android.widget.*
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -25,6 +30,7 @@ import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.io.File
+import java.security.Permission
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -36,26 +42,24 @@ class MainActivity : AppCompatActivity() {
     private var top: Double = 0.0
     private var right: Double = 0.0
     private var bottom: Double = 0.0
-
     private lateinit var cameraProvider: ProcessCameraProvider
-
-    var savedUri = ""
     private lateinit var outputDirectory: File
     private val fileNameFormat = "yyyy-MM-dd-HH-mm-ss-SSS"
     private lateinit var containerFrameLayout: FrameLayout
     private lateinit var imageView: ImageView
     private lateinit var firstLinearLayout: LinearLayout
+    private lateinit var actionsList: ArrayList<String>
+    var savedUri = ""
     private var steps = 0
     private var message = MutableLiveData<String>()
-    private var selectedOperations: ArrayList<String>? = null
+    private var randomTripleActions: ArrayList<String>? = null
+    private val actionSet = setOf(
+        "rightBlink", "leftBlink", "smile", "turnToRight",
+        "turnToLeft", "turnToUp"
+    )
 
 
-    lateinit var  LIVE_DETECTION_OPERATIONS : ArrayList<String>
-
-    private val OPERATIONS = setOf("rightBlink","leftBlink" , "smile", "turnToRight",
-        "turnToLeft", "turnToUp")
-
-
+    @RequiresApi(Build.VERSION_CODES.M)
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,17 +70,18 @@ class MainActivity : AppCompatActivity() {
         firstLinearLayout = findViewById(R.id.first_layout)
         messageTextView = findViewById(R.id.message_text_view)
         message.postValue(resources.getString(R.string.take_camera_in_front_of_your_face))
-        message.observe(this, {
+        message.observe(this) {
             messageTextView.text = message.value
-        })
-        LIVE_DETECTION_OPERATIONS = OPERATIONS.toMutableList() as ArrayList<String>
-        selectedOperations = getTripleOperations() as ArrayList<String>
-        drawOval()
+        }
+        actionsList = actionSet.toMutableList() as ArrayList<String>
+        randomTripleActions = getTripleOperations() as ArrayList<String>
+        setupPermission()
+        showTheFrame()
         startCamera()
 
     }
 
-    private fun drawOval() {
+    private fun showTheFrame() {
         containerFrameLayout.doOnLayout {
             val bitmap: Bitmap = Bitmap.createBitmap(
                 it.measuredWidth,
@@ -163,7 +168,8 @@ class MainActivity : AppCompatActivity() {
                         for (face in faces) {
                             if (steps < 4) {
                                 if (face.boundingBox.left < 0 || face.boundingBox.top < 0) {
-                                    message.value = resources.getString(R.string.put_your_face_in_the_frame)
+                                    message.value =
+                                        resources.getString(R.string.put_your_face_in_the_frame)
                                 } else {
                                     imageCapture.takePicture(
                                         outputOptions,
@@ -188,25 +194,28 @@ class MainActivity : AppCompatActivity() {
                                     when (steps) {
 
                                         0 -> {
-                                            message.value = chooseMessageText(selectedOperations!![0])
+                                            message.value =
+                                                chooseMessageText(randomTripleActions!![0])
                                             chooseFunctionFromFunctionName(
-                                                selectedOperations!![0],
+                                                randomTripleActions!![0],
                                                 face
                                             )
 
                                         }
                                         1 -> {
-                                            message.value = chooseMessageText(selectedOperations!![1])
+                                            message.value =
+                                                chooseMessageText(randomTripleActions!![1])
                                             chooseFunctionFromFunctionName(
-                                                selectedOperations!![1],
+                                                randomTripleActions!![1],
                                                 face
                                             )
 
                                         }
                                         2 -> {
-                                            message.value = chooseMessageText(selectedOperations!![2])
+                                            message.value =
+                                                chooseMessageText(randomTripleActions!![2])
                                             chooseFunctionFromFunctionName(
-                                                selectedOperations!![2],
+                                                randomTripleActions!![2],
                                                 face
                                             )
 
@@ -252,12 +261,12 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetTextI18n")
     private fun rightBlink(face: Face) {
-        if (face.rightEyeOpenProbability != null && face.leftEyeOpenProbability != null)  {
+        if (face.rightEyeOpenProbability != null && face.leftEyeOpenProbability != null) {
             val leftEyeOpenProb = face.leftEyeOpenProbability
             val rightEyeOpenProb = face.rightEyeOpenProbability
             if (rightEyeOpenProb!! < 0.1 && leftEyeOpenProb!! > 0.3) {
                 Log.d("OPERATOR >>> ", "blink")
-                Log.d("STEP >>> ",steps.toString())
+                Log.d("STEP >>> ", steps.toString())
                 steps++
             }
         }
@@ -265,12 +274,12 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetTextI18n")
     private fun leftBlink(face: Face) {
-        if (face.rightEyeOpenProbability != null && face.leftEyeOpenProbability != null)  {
+        if (face.rightEyeOpenProbability != null && face.leftEyeOpenProbability != null) {
             val leftEyeOpenProb = face.leftEyeOpenProbability
             val rightEyeOpenProb = face.rightEyeOpenProbability
-            if (leftEyeOpenProb!! < 0.1 && rightEyeOpenProb!! > 0.3 ) {
+            if (leftEyeOpenProb!! < 0.1 && rightEyeOpenProb!! > 0.3) {
                 Log.d("OPERATOR >>> ", "blink")
-                Log.d("STEP >>> ",steps.toString())
+                Log.d("STEP >>> ", steps.toString())
                 steps++
             }
         }
@@ -282,7 +291,7 @@ class MainActivity : AppCompatActivity() {
         if (face.smilingProbability != null) {
             if (face.smilingProbability!! > 0.9) {
                 Log.d("OPERATOR >>> ", "smile")
-                Log.d("STEP >>> ",steps.toString())
+                Log.d("STEP >>> ", steps.toString())
                 steps++
             }
         }
@@ -295,7 +304,7 @@ class MainActivity : AppCompatActivity() {
 
         if (face.headEulerAngleZ > 35) {
             Log.d("OPERATOR >>> ", "turnToRight")
-            Log.d("STEP >>> ",steps.toString())
+            Log.d("STEP >>> ", steps.toString())
             steps++
         }
     }
@@ -304,8 +313,8 @@ class MainActivity : AppCompatActivity() {
     private fun turnToLeft(face: Face) {
 
         if (face.headEulerAngleY > 40) {
-            Log.d("OPERATOR >>> ","turnToLeft")
-            Log.d("STEP >>> ",steps.toString())
+            Log.d("OPERATOR >>> ", "turnToLeft")
+            Log.d("STEP >>> ", steps.toString())
             steps++
 
         }
@@ -317,7 +326,7 @@ class MainActivity : AppCompatActivity() {
 
         if (face.headEulerAngleX > 40) {
             Log.d("OPERATOR >>> ", "turnToUp")
-            Log.d("STEP >>> ",steps.toString())
+            Log.d("STEP >>> ", steps.toString())
             steps++
 
         }
@@ -326,19 +335,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun chooseFunctionFromFunctionName(functionName: String, face: Face) {
         when (functionName) {
-            LIVE_DETECTION_OPERATIONS[0] -> rightBlink(face)
-            LIVE_DETECTION_OPERATIONS[1] -> leftBlink(face)
-            LIVE_DETECTION_OPERATIONS[2] -> smile(face)
-            LIVE_DETECTION_OPERATIONS[3] -> turnToRight(face)
-            LIVE_DETECTION_OPERATIONS[4] -> turnToLeft(face)
-            LIVE_DETECTION_OPERATIONS[5] -> turnToUp(face)
+            actionsList[0] -> rightBlink(face)
+            actionsList[1] -> leftBlink(face)
+            actionsList[2] -> smile(face)
+            actionsList[3] -> turnToRight(face)
+            actionsList[4] -> turnToLeft(face)
+            actionsList[5] -> turnToUp(face)
         }
 
     }
 
     private fun getTripleOperations(): List<String> {
         val list: MutableList<String> = mutableListOf()
-        val tempList = OPERATIONS.toMutableList()
+        val tempList = actionSet.toMutableList()
         for (i in 0..2) {
             val selectedItem = tempList[Random().nextInt(3)]
             list.add(selectedItem)
@@ -347,15 +356,48 @@ class MainActivity : AppCompatActivity() {
         return list
     }
 
-    private fun chooseMessageText(operation : String) : String {
-        return when(operation){
-            LIVE_DETECTION_OPERATIONS[0] -> getString(R.string.please_blink_right_eye)
-            LIVE_DETECTION_OPERATIONS[1] -> getString(R.string.please_blink_left_eye)
-            LIVE_DETECTION_OPERATIONS[2] -> getString(R.string.please_smile)
-            LIVE_DETECTION_OPERATIONS[3] -> getString(R.string.please_turn_your_neck_right)
-            LIVE_DETECTION_OPERATIONS[4] -> getString(R.string.please_turn_your_neck_left)
-            LIVE_DETECTION_OPERATIONS[5] -> getString(R.string.please_turn_your_neck_up)
-            else -> {""}
+    private fun chooseMessageText(operation: String): String {
+        return when (operation) {
+            actionsList[0] -> getString(R.string.please_blink_right_eye)
+            actionsList[1] -> getString(R.string.please_blink_left_eye)
+            actionsList[2] -> getString(R.string.please_smile)
+            actionsList[3] -> getString(R.string.please_turn_your_neck_right)
+            actionsList[4] -> getString(R.string.please_turn_your_neck_left)
+            actionsList[5] -> getString(R.string.please_turn_your_neck_up)
+            else -> {
+                ""
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun setupPermission() {
+        val permission = checkSelfPermission(Manifest.permission.CAMERA)
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            makePermissionRequest()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun makePermissionRequest() {
+        this.requestPermissions(arrayOf(Manifest.permission.CAMERA), 1917)
+
+    }
+
+    @SuppressLint("UseCompatLoadingForDrawables")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1917 && grantResults[0] != PackageManager.PERMISSION_GRANTED){
+            AlertDialog.Builder(this)
+                .setTitle("Alarm!")
+                .setMessage("You have to enable Camera Permission to continue.")
+                .setIcon(getDrawable(android.R.drawable.alert_dark_frame))
+                .setCancelable(true)
+                .show()
         }
     }
 
