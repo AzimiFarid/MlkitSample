@@ -30,6 +30,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.collections.HashSet
 
 class MainActivity : AppCompatActivity() {
     lateinit var context: Context
@@ -47,14 +48,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var containerFrameLayout: FrameLayout
     private lateinit var imageView: ImageView
     private lateinit var firstLinearLayout: LinearLayout
-    var steps = 0
+    private var steps = 0
     private var message = MutableLiveData<String>()
+    private var selectedOperations: ArrayList<String>? = null
 
 
-    private val LIVE_DETECTION_OPERATIONS = arrayListOf(
-        "blink", "smile", "turnToRight",
-        "turnToLeft", "turnToUp"
-    )
+    lateinit var  LIVE_DETECTION_OPERATIONS : ArrayList<String>
+
+    private val OPERATIONS = setOf("rightBlink","leftBlink" , "smile", "turnToRight",
+        "turnToLeft", "turnToUp")
 
 
     @SuppressLint("SetTextI18n")
@@ -67,12 +69,11 @@ class MainActivity : AppCompatActivity() {
         firstLinearLayout = findViewById(R.id.first_layout)
         messageTextView = findViewById(R.id.message_text_view)
         message.postValue(resources.getString(R.string.take_camera_in_front_of_your_face))
-        message.observe(this ,  {
+        message.observe(this, {
             messageTextView.text = message.value
         })
-/*
-        messageTextView.text =
-            resources.getString(R.string.take_camera_in_front_of_your_face)*/
+        LIVE_DETECTION_OPERATIONS = OPERATIONS.toMutableList() as ArrayList<String>
+        selectedOperations = getTripleOperations() as ArrayList<String>
         drawOval()
         startCamera()
 
@@ -108,7 +109,6 @@ class MainActivity : AppCompatActivity() {
         "RestrictedApi"
     )
     private fun startCamera() {
-
         val options = FaceDetectorOptions.Builder()
             .setClassificationMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
@@ -154,9 +154,6 @@ class MainActivity : AppCompatActivity() {
         )
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-        val selectedOperations = getTripleOperations() as ArrayList<String>
-
-
         imageAnalysis.setAnalyzer(
             ContextCompat.getMainExecutor(this)
         ) { imageProxy ->
@@ -167,9 +164,9 @@ class MainActivity : AppCompatActivity() {
                 detector.process(image)
                     .addOnSuccessListener { faces ->
                         for (face in faces) {
-                            if (steps < 3) {
+                            if (steps < 4) {
                                 if (face.boundingBox.left < 0 || face.boundingBox.top < 0) {
-                                        message.value = resources.getString(R.string.put_your_face_in_the_frame)
+                                    message.value = resources.getString(R.string.put_your_face_in_the_frame)
                                 } else {
                                     imageCapture.takePicture(
                                         outputOptions,
@@ -188,35 +185,38 @@ class MainActivity : AppCompatActivity() {
                                                     Uri.fromFile(photoFile).toString()
                                             }
                                         })
-                                    message.value = selectedOperations[0]
+
 
                                     //TODO : choose random operations
                                     when (steps) {
 
                                         0 -> {
+                                            message.value = chooseMessageText(selectedOperations!![0])
                                             chooseFunctionFromFunctionName(
-                                                selectedOperations[0],
+                                                selectedOperations!![0],
                                                 face
                                             )
-                                            message.value = selectedOperations[1]
 
                                         }
                                         1 -> {
+                                            message.value = chooseMessageText(selectedOperations!![1])
                                             chooseFunctionFromFunctionName(
-                                                selectedOperations[1],
+                                                selectedOperations!![1],
                                                 face
                                             )
-                                            message.value = selectedOperations[2]
 
                                         }
                                         2 -> {
+                                            message.value = chooseMessageText(selectedOperations!![2])
                                             chooseFunctionFromFunctionName(
-                                                selectedOperations[2],
+                                                selectedOperations!![2],
                                                 face
                                             )
-                                            message.value = "Congrats! It is OK."
 
                                         }
+
+                                        3 -> message.value = "It is Done!"
+
 
                                     }
                                 }
@@ -254,12 +254,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetTextI18n")
-    private fun blink(face: Face) {
-        if (face.rightEyeOpenProbability != null && face.rightEyeOpenProbability != null) {
-            val rightEyeOpenProb = face.rightEyeOpenProbability
+    private fun rightBlink(face: Face) {
+        if (face.rightEyeOpenProbability != null && face.leftEyeOpenProbability != null)  {
             val leftEyeOpenProb = face.leftEyeOpenProbability
+            val rightEyeOpenProb = face.rightEyeOpenProbability
+            if (rightEyeOpenProb!! < 0.1 && leftEyeOpenProb!! > 0.3) {
+                Log.d("OPERATOR >>> ", "blink")
+                Log.d("STEP >>> ",steps.toString())
+                steps++
+            }
+        }
+    }
 
-            if (rightEyeOpenProb!! < 0.1 && leftEyeOpenProb!! < 0.1) {
+    @SuppressLint("SetTextI18n")
+    private fun leftBlink(face: Face) {
+        if (face.rightEyeOpenProbability != null && face.leftEyeOpenProbability != null)  {
+            val leftEyeOpenProb = face.leftEyeOpenProbability
+            val rightEyeOpenProb = face.rightEyeOpenProbability
+            if (leftEyeOpenProb!! < 0.1 && rightEyeOpenProb!! > 0.3 ) {
                 Log.d("OPERATOR >>> ", "blink")
                 Log.d("STEP >>> ",steps.toString())
                 steps++
@@ -284,7 +296,7 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun turnToRight(face: Face) {
 
-        if (face.headEulerAngleZ > 40) {
+        if (face.headEulerAngleZ > 35) {
             Log.d("OPERATOR >>> ", "turnToRight")
             Log.d("STEP >>> ",steps.toString())
             steps++
@@ -317,24 +329,37 @@ class MainActivity : AppCompatActivity() {
 
     private fun chooseFunctionFromFunctionName(functionName: String, face: Face) {
         when (functionName) {
-            LIVE_DETECTION_OPERATIONS[0] -> blink(face)
-            LIVE_DETECTION_OPERATIONS[1] -> smile(face)
-            LIVE_DETECTION_OPERATIONS[2] -> turnToRight(face)
-            LIVE_DETECTION_OPERATIONS[3] -> turnToLeft(face)
-            LIVE_DETECTION_OPERATIONS[4] -> turnToUp(face)
+            LIVE_DETECTION_OPERATIONS[0] -> rightBlink(face)
+            LIVE_DETECTION_OPERATIONS[1] -> leftBlink(face)
+            LIVE_DETECTION_OPERATIONS[2] -> smile(face)
+            LIVE_DETECTION_OPERATIONS[3] -> turnToRight(face)
+            LIVE_DETECTION_OPERATIONS[4] -> turnToLeft(face)
+            LIVE_DETECTION_OPERATIONS[5] -> turnToUp(face)
         }
 
     }
 
-    private fun getTripleOperations(): MutableList<String> {
+    private fun getTripleOperations(): List<String> {
         val list: MutableList<String> = mutableListOf()
-        val tempList = LIVE_DETECTION_OPERATIONS.toMutableList()
+        val tempList = OPERATIONS.toMutableList()
         for (i in 0..2) {
-            val selectedItem = tempList.random()
+            val selectedItem = tempList[Random().nextInt(3)]
             list.add(selectedItem)
             tempList.remove(selectedItem)
         }
         return list
+    }
+
+    private fun chooseMessageText(operation : String) : String {
+        return when(operation){
+            LIVE_DETECTION_OPERATIONS[0] -> getString(R.string.please_blink_right_eye)
+            LIVE_DETECTION_OPERATIONS[1] -> getString(R.string.please_blink_left_eye)
+            LIVE_DETECTION_OPERATIONS[2] -> getString(R.string.please_smile)
+            LIVE_DETECTION_OPERATIONS[3] -> getString(R.string.please_turn_your_neck_right)
+            LIVE_DETECTION_OPERATIONS[4] -> getString(R.string.please_turn_your_neck_left)
+            LIVE_DETECTION_OPERATIONS[5] -> getString(R.string.please_turn_your_neck_up)
+            else -> {""}
+        }
     }
 
 }
